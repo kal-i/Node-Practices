@@ -11,7 +11,7 @@ model Session {
   id String @id @default(cuid()) // unique session id
   userId String // Reference to the user model
   user User @relation(fields: [userId], references: [id])
-  token String // JWT token
+  token String @unique // JWT token
   createdAt DateTime @default(now())
   expiresAt DateTime // Token expiry timestamp
 }
@@ -22,10 +22,4 @@ model User {
   email    String @unique
   password String
   sessions Session[] // One-to-many relationship with Session
-}
-
-model BlackListedToken {
-  id Int @id @default(autoincrement())
-  token String @unique
-  createdAt DateTime @default(now())
 }
