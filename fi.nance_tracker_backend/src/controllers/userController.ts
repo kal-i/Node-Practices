@@ -17,7 +17,7 @@ if (isNaN(SALT_ROUNDS) || SALT_ROUNDS <= 0) {
 const EXPIRATION_TIME = Number(process.env.JWT_EXPIRATION_TIME || 3600);
 
 const generateToken = (userId: string, email: string): string => {
-    return jwt.sign({ id: userId, email }, process.env.JWT_SECRET!, { expiresIn: '1h' });
+    return jwt.sign({ id: userId, email }, process.env.JWT_SECRET!, { expiresIn: '1h' , algorithm: 'HS256' });
 };
 
 export const getAllTokens = async (req: Request, res: Response) => {
@@ -54,18 +54,17 @@ export const loginUser = async (req: Request, res: Response) => {
         const isPasswordValid = await bcrypt.compare(password, existingUserPassword);
         if (!isPasswordValid) throw createHttpError(400, 'Invalid password');
 
-        await prisma.session.deleteMany({ where: { id: existingUser.id, expiresAt: { lt: new Date() } } });
+        await prisma.session.deleteMany({ 
+            where: { id: existingUser.id }
+         });
 
-        let session = await prisma.session.findFirst({ where: { userId: existingUser.id } });
-        if (!session) {
-            session = await prisma.session.create({
-                data: {
-                    userId: existingUser.id,
-                    token: generateToken(existingUser.id, existingUser.email),
-                    expiresAt: new Date(Date.now() + EXPIRATION_TIME * 1000)
-                },
-            });
-        }
+         const session = await prisma.session.create({
+            data: {
+                userId: existingUser.id,
+                token: generateToken(existingUser.id, existingUser.email),
+                expiresAt: new Date(Date.now() + EXPIRATION_TIME * 1000)
+            },
+        });
 
         res.status(200).json({
             message: 'Login successful',
@@ -136,10 +135,15 @@ export const logoutUser = async (req: Request, res: Response) => {
         }
 
         const extractedToken: string = authHeader.split(' ')[1];
-        jwt.verify(extractedToken, JWT_SECRET);
+        const payload = jwt.verify(extractedToken, JWT_SECRET) as { id: string };
 
-        await prisma.session.delete({
-            where: { token: extractedToken },
+        // only delete the current token
+        // much better to delete all sessions of a user
+        // await prisma.session.delete({
+        //     where: { token: extractedToken },
+        // });
+        await prisma.session.deleteMany({
+            where: { userId: payload.id }
         });
 
         res.status(200).json({ message: 'Logout successful' });
