@@ -1,16 +1,28 @@
-import { Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import createHttpError from 'http-errors';
 
-function authMiddleware(req: Request, res: Response, next: NextFunction) {
-    const token = req.headers['authorization'];
-
-    if (!token) { return res.status(401).json({ message: 'No token provided' }) }
-
-    jwt.verify(token, process.env.JWT_SECRET || '', (error: any, decoded: any) => {
-        if (error) { return res.status(401).json({ message: 'Invalid token' }) }
-
-        req
-    });
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET must be defined in environment variables.');
 }
 
-export default authMiddleware;
+export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader?.startsWith('Bearer ')) {
+            throw createHttpError(401, 'Unauthorized: Missing or malformed token');
+        }
+
+        const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, JWT_SECRET); 
+        //req.user = decoded; // attach user info (decoded token) to the req obj
+
+        next(); // token is valid, proceed to the next middleware or controller
+    } catch (error) {
+        console.error('Authentication error:', error);
+        res.status(401).json({
+            message: 'Unauthorized: Invalid or expired token'
+        });
+    }
+}
