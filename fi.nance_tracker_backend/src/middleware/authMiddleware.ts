@@ -1,8 +1,10 @@
-import express, { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
+import { AuthenticatedRequest } from '../types/customRequest';
 import createHttpError from 'http-errors';
+import jwt from 'jsonwebtoken';
 import prisma from '../models/prismaClient';
 
-export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+export const authMiddleware = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader?.startsWith('Bearer ')) {
@@ -10,6 +12,9 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         }
 
         const token = authHeader.split(' ')[1];
+
+        let payload = jwt.verify(token, process.env.JWT_SECRET!) as { id: string };
+
         const session = await prisma.session.findUnique({ 
             where: { token } 
         });
@@ -22,6 +27,11 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
             }
             return next(createHttpError(401, 'Session expired'));
         }
+
+        // attach user info to req
+        req.user = { 
+            id: payload.id,            
+         };
 
         next(); // token is valid, proceed to the next middleware or controller
     } catch (error) {
