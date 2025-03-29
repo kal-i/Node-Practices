@@ -8,10 +8,10 @@ const router = Router();
 
 // This route will be mounted on the /users/register path
 // The register function is the controller that will handle the register route
-router.get('/', UserController.getAllUsers);
-router.get('/tokens', UserController.getAllTokens);
+router.get('/', authMiddleware, UserController.getAllUsers);
+router.get('/tokens', authMiddleware, UserController.getAllTokens);
 router.post('/login', UserController.loginUser);
 router.post('/register', UserController.registerUser);
-router.post('/logout', UserController.logoutUser);
+router.post('/logout', authMiddleware, UserController.logoutUser);
 
 export default router;

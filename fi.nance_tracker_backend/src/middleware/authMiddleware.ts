@@ -1,13 +1,8 @@
 import express, { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
 import createHttpError from 'http-errors';
+import prisma from '../models/prismaClient';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET must be defined in environment variables.');
-}
-
-export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader?.startsWith('Bearer ')) {
@@ -15,8 +10,18 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
         }
 
         const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, JWT_SECRET); 
-        //req.user = decoded; // attach user info (decoded token) to the req obj
+        const session = await prisma.session.findUnique({ 
+            where: { token } 
+        });
+
+        if (!session || session.expiresAt < new Date()) {
+            if (session) {
+                await prisma.session.delete({
+                    where: { id: session.id }
+                });
+            }
+            return next(createHttpError(401, 'Session expired'));
+        }
 
         next(); // token is valid, proceed to the next middleware or controller
     } catch (error) {
