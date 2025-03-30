@@ -1,8 +1,7 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { AuthenticatedRequest } from '../types/customRequest';
 import createHttpError from 'http-errors';
 import prisma from '../models/prismaClient';
-import { create } from 'domain';
 
 export const getUserAccounts = async (req: AuthenticatedRequest, res: Response) => {
     try {
