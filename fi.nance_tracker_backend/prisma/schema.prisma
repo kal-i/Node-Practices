@@ -22,4 +22,50 @@ model User {
   email    String @unique
   password String
   sessions Session[] // One-to-many relationship with Session
+  accounts Account[] // One-to-many relationship with Account
+}
+
+model Account {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  name String
+  type String
+  balance Decimal
+  transactions BaseTransaction[] // One-to-many relationship with BaseTransaction
+  transferTransactions TransferTransaction[]
+}
+
+model BaseTransaction {
+  id String @id @default(cuid())
+  accountId String
+  account Account @relation(fields: [accountId], references: [id])
+  amount Decimal
+  note String
+  date DateTime @default(now())
+
+  // One-to-one relationship with a concrete transaction
+  expenseTransaction ExpenseTransaction?
+  incomeTransaction IncomeTransaction?
+  transferTransaction TransferTransaction?
+}
+
+model ExpenseTransaction {
+  id String @id @default(cuid())
+  baseTransactionId String @unique
+  baseTransaction BaseTransaction @relation(fields: [baseTransactionId], references: [id])
+}
+
+model IncomeTransaction {
+  id String @id @default(cuid())
+  baseTransactionId String @unique
+  baseTransaction BaseTransaction @relation(fields: [baseTransactionId], references: [id])
+}
+
+model TransferTransaction {
+  id String @id @default(cuid())
+  baseTransactionId String @unique
+  baseTransaction BaseTransaction @relation(fields: [baseTransactionId], references: [id])
+  receipientAccountId String
+  receipientAccount Account @relation(fields: [receipientAccountId], references: [id])
 }

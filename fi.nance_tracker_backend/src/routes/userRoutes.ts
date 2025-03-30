@@ -1,4 +1,4 @@
-import { Router, Response  } from 'express';
+import { Router } from 'express';
 import { AuthenticatedRequest } from '../types/customRequest';
 import * as UserController from '../controllers/userController';
 import { authMiddleware } from '../middleware/authMiddleware';
