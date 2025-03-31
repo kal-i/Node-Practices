@@ -70,7 +70,7 @@ export const registerExpenseTransaction = async (req: AuthenticatedRequest, res:
             concreteTransaction: expenseTransaction
          });
     } catch (error) {
-        console.error('Failed to register expense: ', error);
+        console.error('Failed to register expense transaction: ', error);
         res.status(500).json({
             message: error instanceof createHttpError.HttpError
             ? error.message
@@ -111,12 +111,12 @@ export const registerIncomeTransaction = async (req: AuthenticatedRequest, res: 
         });
 
         res.status(200).json({
-            message: 'Inccome transaction registered',
+            message: 'Income transaction registered',
             baseTransaction: baseTransaction,
             concreteTransaction: incomeTransaction
         });
     } catch (error) {
-        console.error('Failed to register income: ', error);
+        console.error('Failed to register income transaction: ', error);
         res.status(500).json({
             message: error instanceof createHttpError.HttpError
             ? error.message
@@ -126,5 +126,55 @@ export const registerIncomeTransaction = async (req: AuthenticatedRequest, res: 
 }
 
 export const registerTransferTransction = async (req: AuthenticatedRequest, res: Response) => {
-    
+    const { senderAccountId, recipientAccountId, amount, note, date } = req.body;
+
+    try {
+        const senderAccount = await prisma.account.findFirst({ where: { id: senderAccountId } });
+        if (!senderAccount) {
+            throw createHttpError(401, 'Sender account not found');
+        }
+
+        const recipientAccount = await prisma.account.findFirst({ where: { id: recipientAccountId } });
+        if (!recipientAccount) {
+            throw createHttpError(401, 'Recipient account not found');
+        }
+
+        const baseTransaction = await prisma.baseTransaction.create({
+            data: {
+                accountId: senderAccountId,
+                amount: amount,
+                note: note,
+                date: date
+            }
+        });
+
+        const transferTransaction = await prisma.transferTransaction.create({
+            data: {
+                baseTransactionId: baseTransaction.id,
+                receipientAccountId: recipientAccount.id,
+            }
+        });
+
+        const updatedSenderAccount = await prisma.account.update({
+            where: { id: senderAccount.id },
+            data: {
+                balance: Number(senderAccount.balance) - amount
+            }
+        });
+
+        const updatedRecipientAccount = await prisma.account.update({
+            where: { id: recipientAccount.id },
+            data: {
+                balance: Number(recipientAccount.balance) + amount
+            }
+        });
+
+        res.status(200).json({
+            message: 'Transfer transaction registered',
+            baseTransaction: baseTransaction,
+            concreteTransaction: transferTransaction
+        });
+    } catch (error) {
+        console.error('Failted to register transfer transaction: ', error);
+    }
 }
