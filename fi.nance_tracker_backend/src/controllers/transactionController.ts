@@ -65,7 +65,7 @@ export const registerExpenseTransaction = async (req: AuthenticatedRequest, res:
         });
 
         res.status(200).json({ 
-            message: 'Registered Expense Transaction', 
+            message: 'Expense transaction registered', 
             baseTransaction: baseTransaction, 
             concreteTransaction: expenseTransaction
          });
@@ -79,6 +79,52 @@ export const registerExpenseTransaction = async (req: AuthenticatedRequest, res:
     }
 }
 
-export const registerIncomeTransaction = async (req: AuthenticatedRequest, res: Response) => {}
+export const registerIncomeTransaction = async (req: AuthenticatedRequest, res: Response) => {
+    const { accountId, amount, note, date } = req.body;
 
-export const registerTransferTransction = async (req: AuthenticatedRequest, res: Response) => {}
+    try {
+        const account = await prisma.account.findFirst({ where: { id: accountId } });
+        if (!account) {
+            throw createHttpError(401, 'Account not found');
+        }
+
+        const baseTransaction = await prisma.baseTransaction.create({
+            data: {
+                accountId: accountId,
+                amount: amount,
+                note: note,
+                date: date
+            }
+        });
+
+        const incomeTransaction = await prisma.incomeTransaction.create({
+            data: {
+                baseTransactionId: baseTransaction.id,
+            }
+        });
+
+        const updatedAccount = await prisma.account.update({
+            where: { id: account.id },
+            data: {
+                balance: Number(account.balance) + amount
+            }
+        });
+
+        res.status(200).json({
+            message: 'Inccome transaction registered',
+            baseTransaction: baseTransaction,
+            concreteTransaction: incomeTransaction
+        });
+    } catch (error) {
+        console.error('Failed to register income: ', error);
+        res.status(500).json({
+            message: error instanceof createHttpError.HttpError
+            ? error.message
+            : 'Failed to register income'
+        });
+    }
+}
+
+export const registerTransferTransction = async (req: AuthenticatedRequest, res: Response) => {
+    
+}
