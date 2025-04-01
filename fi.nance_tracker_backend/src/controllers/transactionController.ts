@@ -94,7 +94,7 @@ export const registerIncomeTransaction = async (req: AuthenticatedRequest, res: 
     const { accountId, amount, note, date } = req.body;
 
     try {
-        const account = await prisma.account.findFirst({ where: { id: accountId } });
+        const account = await prisma.account.findUnique({ where: { id: accountId } });
         if (!account) {
             throw createHttpError(401, 'Account not found');
         }
@@ -144,12 +144,12 @@ export const registerTransferTransction = async (req: AuthenticatedRequest, res:
     const { senderAccountId, recipientAccountId, amount, note, date } = req.body;
 
     try {
-        const senderAccount = await prisma.account.findFirst({ where: { id: senderAccountId } });
+        const senderAccount = await prisma.account.findUnique({ where: { id: senderAccountId } });
         if (!senderAccount) {
             throw createHttpError(401, 'Sender account not found');
         }
 
-        const recipientAccount = await prisma.account.findFirst({ where: { id: recipientAccountId } });
+        const recipientAccount = await prisma.account.findUnique({ where: { id: recipientAccountId } });
         if (!recipientAccount) {
             throw createHttpError(401, 'Recipient account not found');
         }
